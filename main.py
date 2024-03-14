@@ -6,7 +6,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from models.users import User
 from db.supabase import create_supabase_client
 
-import uvicorn
+# Replacing uvicorn with hypercorn, b/c freezing sucks
+import asyncio
+from hypercorn.asyncio import serve
+from hypercorn.config import Config
+config = Config()
+config.bind = ["localhost:8080"]
 
 # Initialize supabase client
 supabase = create_supabase_client()
@@ -85,4 +90,4 @@ async def protected_route(user: User = Depends(get_current_user)):
 
 
 if __name__ == '__main__':
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)
+    asyncio.run(serve(app, config))

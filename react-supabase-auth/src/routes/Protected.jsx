@@ -1,4 +1,13 @@
+import { useEffect } from 'react';
+import { useAuth } from '../AuthContext';
+
 const Protected = () => {
+    const { refreshSession } = useAuth();
+
+    useEffect(() => {
+        refreshSession()
+    }, [refreshSession])
+
     return (
         <>
             <h1>Protected Route</h1>

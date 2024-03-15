@@ -1,9 +1,8 @@
 from typing import Annotated
 
-from fastapi import FastAPI, status, HTTPException, Depends, Response
+from fastapi import FastAPI, status, HTTPException, Depends, Response, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-# from fastapi.security import OAuth2PasswordBearer
 from models.users import User
 from db.supabase import create_supabase_client
 
@@ -37,7 +36,7 @@ app.add_middleware(
 )
 
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     user = supabase.auth.get_user()
     if user is None:
         raise HTTPException(
@@ -46,6 +45,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         )
     return user
 
+
 @app.get("/")
 def default_route():
     return {"detail": "Root Route"}
@@ -53,8 +53,8 @@ def default_route():
 
 @app.post("/register")
 def register(request: User):
-    response = supabase.auth.sign_up({"email": request.email,
-                                      "password": request.password})
+    response = supabase.auth.sign_up(
+        {"email": request.email, "password": request.password})
     user = response.user
     return {"user_id": user.id}
 
@@ -62,7 +62,8 @@ def register(request: User):
 @app.post("/login")
 def login(request: User, response: Response):
     try:
-        auth_user = supabase.auth.sign_in_with_password({"email": request.email,  "password": request.password})
+        auth_user = supabase.auth.sign_in_with_password(
+            {"email": request.email,  "password": request.password})
         return auth_user
     except:
         raise HTTPException(
@@ -75,6 +76,20 @@ def login(request: User, response: Response):
 def logout():
     response = supabase.auth.sign_out()
     return "success"
+
+
+@app.post("/refresh")
+async def refresh_token(request: Request):
+    data = await request.json()
+    token = data.get('refresh_token')
+
+    session = supabase.auth.refresh_session(token)
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid session",
+        )
+    return session
 
 
 @app.get("/protected")

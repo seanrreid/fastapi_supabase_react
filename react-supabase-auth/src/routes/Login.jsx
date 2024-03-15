@@ -28,8 +28,9 @@ export const action = async ({ request }) => {
 
         if (statusCode === 200) {
             const data = await response.json();
-            const { session } = data;
+            const { session, user } = data;
             localStorage.clear();
+            localStorage.setItem('user_id', user.id)
             localStorage.setItem('access_token', session.access_token);
             localStorage.setItem('refresh_token', session.refresh_token);
             localStorage.setItem('expiration', session.expires_at);

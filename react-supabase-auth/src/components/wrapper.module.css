@@ -1,0 +1,11 @@
+.wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 auto;
+    max-width: 64rem;
+    width: 100vw;
+
+    h1, div {
+        width: 100%;
+    }
+}

@@ -1,6 +1,7 @@
-from typing import Union
+from typing import Annotated
 
-from fastapi import FastAPI, status, HTTPException, Depends
+from fastapi import FastAPI, status, HTTPException, Depends, Response
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 # from fastapi.security import OAuth2PasswordBearer
 from models.users import User
@@ -11,12 +12,14 @@ import asyncio
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
 config = Config()
-config.bind = ["localhost:8080"]
+config.bind = ["localhost:8000"]
 
 # Initialize supabase client
 supabase = create_supabase_client()
 
 app = FastAPI()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 # Setup our origins...
 # ...for now it's just our local environments
@@ -34,17 +37,14 @@ app.add_middleware(
 )
 
 
-async def get_current_user():
-    try:
-        res = supabase.auth.get_session()
-        print(res)
-        return res
-    except Exception as e:
+async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+    user = supabase.auth.get_user()
+    if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
-
+    return user
 
 @app.get("/")
 def default_route():
@@ -60,10 +60,9 @@ def register(request: User):
 
 
 @app.post("/login")
-def login(request: User):
+def login(request: User, response: Response):
     try:
-        auth_user = supabase.auth.sign_in_with_password({"email": request.email,
-                                                        "password": request.password})
+        auth_user = supabase.auth.sign_in_with_password({"email": request.email,  "password": request.password})
         return auth_user
     except:
         raise HTTPException(
@@ -81,7 +80,7 @@ def logout():
 @app.get("/protected")
 async def protected_route(user: User = Depends(get_current_user)):
     if user is not None:
-        return user
+        return {"detail": "PROTECTED ROUTE IS ACCESSIBLE!"}
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

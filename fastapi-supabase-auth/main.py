@@ -35,7 +35,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+"""
+This middleware insures that the sessions are per user, otherwise it defaults to the server-side session.
 
+Server-side sessions are updated with each login, and are one-at-a-time.
+This means, all currently logged in users will see the same data.
+
+Setting this up lets the frontend manage each user session, not the server.
+"""
 def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     user = supabase.auth.get_user()
     if user is None:
@@ -43,6 +50,17 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
+    """
+    This passes the correct auth information from the frontend to Supbase.
+
+    This was found via this issue, and NOT in the docs. :angry_face_emoji:
+    https://github.com/orgs/supabase/discussions/3479#discussioncomment-7934745
+
+    """
+    supabase.postgrest.auth(
+        # verified that this was real
+        token=token
+    )  # this
     return user
 
 
